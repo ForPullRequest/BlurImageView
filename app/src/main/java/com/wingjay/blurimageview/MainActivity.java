@@ -112,6 +112,14 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        blurImageView.setImageLoaderListener(new BlurImageView.ImageLoaderListener() {
+            @Override
+            public void loadOrigin(String oUrl, ImageView imageView, Bitmap blurBitmap) {
+                Log.e("loadOrigin", oUrl);
+                Drawable drawable = new BitmapDrawable(blurBitmap);
+                Glide.with(MainActivity.this).load(oUrl).placeholder(drawable).skipMemoryCache(true).crossFade().into(imageView);
+            }
+        });
     }
 
     @OnClick(R.id.fast_blur_btn)
@@ -119,32 +127,10 @@ public class MainActivity extends AppCompatActivity {
         if (!alreadyLoad) {
             customizeBlurImageView();
 
-//      blurImageView.setBlurRadius(BlurImageView.DEFAULT_BLUR_RADIUS);
-            blurImageView.setImageLoaderListener(new BlurImageView.ImageLoaderListener() {
-
-                @Override
-                public void loadOrigin(String oUri, ImageView imageView, Bitmap blurBitmap) {
-                    Log.e("loadOrigin", oUri);
-                    Drawable drawable =new BitmapDrawable(blurBitmap);
-
-
-                    Glide.with(MainActivity.this).load(oUri).placeholder(drawable).skipMemoryCache(true).crossFade().into(imageView);
-                }
-            });
-            blurImageView.setCancelLoaderListener(new BlurImageView.CancelLoaderListener() {
-                @Override
-                public void cancel(ImageView imageView) {
-                    Glide.with(MainActivity.this);
-                }
-            });
             Glide.with(MainActivity.this).load(mediumSmUrl[getResIndex()]).asBitmap().into(new SimpleTarget<Bitmap>() {
                 @Override
-                public void onResourceReady(Bitmap resource, GlideAnimation<? super Bitmap> glideAnimation) {
-                    Drawable drawable =new BitmapDrawable(BlurImageView.getBlurBitmap(resource));
-
-
-                    Glide.with(MainActivity.this).load(mediumNmUrl[getResIndex()]).placeholder(drawable).skipMemoryCache(true).crossFade().into(blurImageView.getImageView());
-//                    blurImageView.start(mediumNmUrl[getResIndex()], BlurImageView.getBlurBitmap(resource));
+                public void onResourceReady(Bitmap blurRes, GlideAnimation<? super Bitmap> glideAnimation) {
+                    blurImageView.setOriginImageByUrl(mediumNmUrl[getResIndex()], blurRes);
                 }
             });
 
@@ -162,7 +148,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void customizeBlurImageView() {
 //        blurImageView.setProgressBarBgColor(blurImageViewProgressBgColor[getResIndex()]);
-//        blurImageView.setProgressBarColor(blurImageViewProgressClor[getResIndex()]);
+//        blurImageView.setProgressBarColor(blurImageViewProgressColor[getResIndex()]);
     }
 
     @Override
