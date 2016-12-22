@@ -2,6 +2,7 @@ package com.wingjay.blurimageviewlib;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
@@ -21,7 +22,7 @@ public class BlurImageView extends RelativeLayout {
 
     private int mBlurRadius = DEFAULT_BLUR_RADIUS;
 
-    //  private String mBlurImageUrl, mOriginImageUrl;
+    private String mBlurImageUrl, mOriginImageUrl;
     //default image's color
     private int greyColor = Color.parseColor("#66CCCCCC");
     private Drawable defaultDrawable = new ColorDrawable(greyColor);
@@ -64,44 +65,88 @@ public class BlurImageView extends RelativeLayout {
 //    addView(loadingCircleProgressView);
     }
 
+    /**
+     * @return
+     * @deprecated
+     */
     public ImageView getImageView() {
         return imageView;
     }
 
-//  /**
-//   * This method will fetch bitmap from resource and make it blurry, display
-//   * @param blurImageRes the image resource id which is needed to be blurry
-//   */
-//  public void setBlurImageByRes(int blurImageRes) {
-//    buildDrawingCache();
-//    Bitmap blurBitmap = FastBlurUtil.doBlur(getDrawingCache(), mBlurRadius, true);
-//    imageView.setImageBitmap(blurBitmap);
-//  }
-//
-//  /**
-//   * This image won't be blurry.
-//   * @param originImageRes The origin image resource id.
-//   */
-//  public void setOriginImageByRes(int originImageRes) {
-//    Bitmap originBitmap = BitmapFactory.decodeResource(mContext.getResources(), originImageRes);
-//    imageView.setImageBitmap(originBitmap);
-//  }
+    /**
+     * This method will fetch bitmap from resource and make it blurry, display
+     *
+     * @param blurImageRes the image resource id which is needed to be blurry
+     */
+    public void setBlurImageByRes(int blurImageRes) {
+        buildDrawingCache();
+        Bitmap blurBitmap = FastBlurUtil.doBlur(getDrawingCache(), mBlurRadius, true);
+        imageView.setImageBitmap(blurBitmap);
+    }
+
+    /**
+     * This image won't be blurry.
+     *
+     * @param originImageRes The origin image resource id.
+     */
+    public void setOriginImageByRes(int originImageRes) {
+        Bitmap originBitmap = BitmapFactory.decodeResource(mContext.getResources(), originImageRes);
+        imageView.setImageBitmap(originBitmap);
+    }
 
     /**
      * @param blurImageUrl
-     * @deprecated
      */
-    public void setBlurImageByUrl(String blurImageUrl) {
+    public BlurImageView setBlurImageByUrl(String blurImageUrl) {
+        mBlurImageUrl = blurImageUrl;
         cancelImageRequestForSafety();
+        return this;
 //    imageLoaderListener.loadBlur(blurImageUrl, imageView);
     }
 
     /**
      * @param originImageUrl
      */
-    public void setOriginImageByUrl(String originImageUrl, Bitmap blurRes) {
+    public BlurImageView setOriginImageByUrl(String originImageUrl) {
+        mOriginImageUrl = originImageUrl;
         cancelImageRequestForSafety();
-        imageLoaderListener.loadOrigin(originImageUrl, imageView, BlurImageView.getBlurBitmap(blurRes));
+        return this;
+//        imageLoaderListener.loadOrigin(originImageUrl, imageView, BlurImageView.getBlurBitmap(placeholder));
+    }
+
+    private boolean isRecycle = true;
+
+    public void setRecycle(boolean recycle) {
+        isRecycle = recycle;
+    }
+
+    /**
+     * 在{@link #setBlurBitmap}后执行 不然会持续寻找
+     * 在{@link #setImageLoaderListener}后执行
+     */
+    public void showOrigin() {
+        imageView.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (hasBlur) {
+                    hasBlur = false;
+                    if (imageLoaderListener != null)
+                        imageLoaderListener.loadOrigin(mOriginImageUrl, imageView, getBlurBitmap(blurBitmap));
+                } else if (isRecycle) {
+                    showOrigin();
+                } else {
+                    throw new IllegalArgumentException("setBlurBitmap should be invoked before");
+                }
+            }
+        }, 200);
+    }
+
+    /**
+     * 在{@link #setBlurImageByUrl}、{@link #setBlurLoaderListener}后执行
+     */
+    public void showBlur() {
+        if (blurLoaderListener != null)
+            blurLoaderListener.loadBlur(mBlurImageUrl, imageView);
     }
 
     /**
@@ -110,12 +155,18 @@ public class BlurImageView extends RelativeLayout {
      * @param loadedBitmap
      * @return
      */
-    public static Bitmap getBlurBitmap(Bitmap loadedBitmap) {
+    public Bitmap getBlurBitmap(Bitmap loadedBitmap) {
         // make this bitmap mutable
         loadedBitmap = loadedBitmap.copy(loadedBitmap.getConfig(), true);
-        return FastBlurUtil.doBlur(loadedBitmap, DEFAULT_BLUR_RADIUS, true);
+        return FastBlurUtil.doBlur(loadedBitmap, mBlurRadius, true);
     }
 
+    /**
+     * 需在showOrigin之前
+     *
+     * @param blurRadius
+     * @return
+     */
     public BlurImageView setBlurRadius(int blurRadius) {
         if (blurRadius < 0) {
             throw new IllegalArgumentException("blurRadius must not be less than 0");
@@ -128,12 +179,33 @@ public class BlurImageView extends RelativeLayout {
      * 不一定需要
      */
     public void cancelImageRequestForSafety() {
-//    cancelLoaderListener.cancel(imageView);
+        if (cancelLoaderListener != null)
+            cancelLoaderListener.cancel(imageView);
     }
 
     public void clear() {
         cancelImageRequestForSafety();
         imageView.setImageBitmap(null);
+        blurBitmap = null;
+    }
+
+    private Bitmap blurBitmap;
+    private boolean hasBlur;//是否有blur资源
+
+    public BlurImageView setBlurBitmap(Bitmap blurBitmap) {
+        this.blurBitmap = blurBitmap;
+        hasBlur = true;
+        return this;
+    }
+
+    private BlurLoaderListener blurLoaderListener;
+
+    public interface BlurLoaderListener {
+        void loadBlur(String bUrl, ImageView imageView);
+    }
+
+    public void setBlurLoaderListener(BlurLoaderListener blurLoaderListener) {
+        this.blurLoaderListener = blurLoaderListener;
     }
 
     private ImageLoaderListener imageLoaderListener;
@@ -142,7 +214,7 @@ public class BlurImageView extends RelativeLayout {
      * 加载图片的监听
      */
     public interface ImageLoaderListener {
-        //    void loadBlur(String bUrl, ImageView imageView);
+        //将oUrl加载到imageView并把blurBitmap作为placeholder
         void loadOrigin(String oUrl, ImageView imageView, Bitmap blurBitmap);
     }
 
@@ -151,19 +223,19 @@ public class BlurImageView extends RelativeLayout {
         return this;
     }
 
-//  private CancelLoaderListener cancelLoaderListener;
+    private CancelLoaderListener cancelLoaderListener;
 
     /**
      * 取消加载图片的监听
      */
-//  public interface CancelLoaderListener{
-//    void cancel(ImageView imageView);
-//  }
+    public interface CancelLoaderListener {
+        void cancel(ImageView imageView);
+    }
 
-//  public BlurImageView setCancelLoaderListener(CancelLoaderListener cancelLoaderListener) {
-//    this.cancelLoaderListener = cancelLoaderListener;
-//    return this;
-//  }
+    public BlurImageView setCancelLoaderListener(CancelLoaderListener cancelLoaderListener) {
+        this.cancelLoaderListener = cancelLoaderListener;
+        return this;
+    }
 
     /**
      * If you disable progress, then it won't show a loading progress view when you're loading image.

@@ -116,7 +116,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void loadOrigin(String oUrl, ImageView imageView, Bitmap blurBitmap) {
                 Log.e("loadOrigin", oUrl);
+                //blurBitmap为对源资源模糊后的bitmap
                 Drawable drawable = new BitmapDrawable(blurBitmap);
+                //skipMemoryCache为了重复出现blur
+                //鉴于Glide必须通过placeholder的方式设置这两张图的出现方式 不然会闪屏
+                //不得已使用串行的方式加载两张图
                 Glide.with(MainActivity.this).load(oUrl).placeholder(drawable).skipMemoryCache(true).crossFade().into(imageView);
             }
         });
@@ -129,11 +133,13 @@ public class MainActivity extends AppCompatActivity {
 
             Glide.with(MainActivity.this).load(mediumSmUrl[getResIndex()]).asBitmap().into(new SimpleTarget<Bitmap>() {
                 @Override
-                public void onResourceReady(Bitmap blurRes, GlideAnimation<? super Bitmap> glideAnimation) {
-                    blurImageView.setOriginImageByUrl(mediumNmUrl[getResIndex()], blurRes);
+                public void onResourceReady(Bitmap blurBitmap, GlideAnimation<? super Bitmap> glideAnimation) {
+                    //设置模糊的源资源
+                    blurImageView.setBlurBitmap(blurBitmap);
                 }
             });
-
+            blurImageView.setOriginImageByUrl(mediumNmUrl[getResIndex()])
+                    .showOrigin();
             alreadyLoad = true;
             fastBlurBtn.setText("Click and Clear current image");
             imageIndicator.setText((getResIndex() + 1) + "/" + mediumNmUrl.length);
