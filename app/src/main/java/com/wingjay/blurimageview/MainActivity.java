@@ -76,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
             Color.parseColor("#E29C45"),
     };
 
-    int[] blurImageViewProgressClor = {
+    int[] blurImageViewProgressColor = {
             Color.WHITE,
             Color.parseColor("#789262"),
             Color.parseColor("#7BCFA6"),
@@ -121,40 +121,56 @@ public class MainActivity extends AppCompatActivity {
                 //skipMemoryCache为了重复出现blur
                 //鉴于Glide必须通过placeholder的方式设置这两张图的出现方式 不然会闪屏
                 //不得已使用串行的方式加载两张图
+//                imageView.setImageDrawable(drawable);
                 Glide.with(MainActivity.this).load(oUrl).placeholder(drawable).skipMemoryCache(true).crossFade().into(imageView);
             }
         });
+        customizeBlurImageView();
+
+        Glide.with(MainActivity.this).load(mediumSmUrl[getResIndex()]).asBitmap().into(new SimpleTarget<Bitmap>() {
+            @Override
+            public void onResourceReady(Bitmap blurBitmap, GlideAnimation<? super Bitmap> glideAnimation) {
+                //设置模糊的源资源
+                blurImageView.setBlurBitmap(blurBitmap);
+            }
+        });
+        //显示清晰图片
+        blurImageView.setOriginImageByUrl(mediumNmUrl[getResIndex()])
+                .showOrigin();
     }
 
     @OnClick(R.id.fast_blur_btn)
     void doFastBlur() {
-        if (!alreadyLoad) {
-            customizeBlurImageView();
-
-            Glide.with(MainActivity.this).load(mediumSmUrl[getResIndex()]).asBitmap().into(new SimpleTarget<Bitmap>() {
-                @Override
-                public void onResourceReady(Bitmap blurBitmap, GlideAnimation<? super Bitmap> glideAnimation) {
-                    //设置模糊的源资源
-                    blurImageView.setBlurBitmap(blurBitmap);
-                }
-            });
-            blurImageView.setOriginImageByUrl(mediumNmUrl[getResIndex()])
-                    .showOrigin();
-            alreadyLoad = true;
-            fastBlurBtn.setText("Click and Clear current image");
-            imageIndicator.setText((getResIndex() + 1) + "/" + mediumNmUrl.length);
-        } else {
-            blurImageView.clear();
-
-            currentIndex++;
-            alreadyLoad = false;
-            fastBlurBtn.setText("Click to load new Image");
-        }
+        currentIndex++;
+        blurImageView.clear();
+        Glide.with(MainActivity.this).load(mediumSmUrl[getResIndex()]).asBitmap().into(new SimpleTarget<Bitmap>() {
+            @Override
+            public void onResourceReady(Bitmap blurBitmap, GlideAnimation<? super Bitmap> glideAnimation) {
+                //设置模糊的源资源
+                blurImageView.setBlurBitmap(blurBitmap);
+            }
+        });
+        //显示清晰图片
+        blurImageView.setOriginImageByUrl(mediumNmUrl[getResIndex()])
+                .showOrigin();
+//        if (!alreadyLoad) {
+//            alreadyLoad = true;
+//
+//            fastBlurBtn.setText("Click and Clear current image");
+//            imageIndicator.setText((getResIndex() + 1) + "/" + mediumNmUrl.length);
+//        } else {
+//            alreadyLoad = false;
+//            blurImageView.clear();
+//
+//            currentIndex++;
+//            doFastBlur();
+////            fastBlurBtn.setText("Click to load new Image");
+//        }
     }
 
     private void customizeBlurImageView() {
-//        blurImageView.setProgressBarBgColor(blurImageViewProgressBgColor[getResIndex()]);
-//        blurImageView.setProgressBarColor(blurImageViewProgressColor[getResIndex()]);
+        blurImageView.setProgressBarBgColor(blurImageViewProgressBgColor[getResIndex()]);
+        blurImageView.setProgressBarColor(blurImageViewProgressColor[getResIndex()]);
     }
 
     @Override

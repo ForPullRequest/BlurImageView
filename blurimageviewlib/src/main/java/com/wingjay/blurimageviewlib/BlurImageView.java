@@ -29,9 +29,9 @@ public class BlurImageView extends RelativeLayout {
 
     private ImageView imageView;
 
-//  private LoadingCircleProgressView loadingCircleProgressView;
+    private LoadingCircleProgressView loadingCircleProgressView;
 
-//  private boolean enableProgress = true;//TODO progress开关
+    private boolean enableProgress = true;
 
     public BlurImageView(Context context) {
         this(context, null);
@@ -56,13 +56,13 @@ public class BlurImageView extends RelativeLayout {
         addView(imageView);
 
         //progress 初始化
-//    loadingCircleProgressView = new LoadingCircleProgressView(mContext);
-//    LayoutParams progressBarLayoutParams =
-//        new LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
-//    progressBarLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
-//    loadingCircleProgressView.setLayoutParams(progressBarLayoutParams);
-//    loadingCircleProgressView.setVisibility(GONE);
-//    addView(loadingCircleProgressView);
+        loadingCircleProgressView = new LoadingCircleProgressView(mContext);
+        LayoutParams progressBarLayoutParams =
+                new LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+        progressBarLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
+        loadingCircleProgressView.setLayoutParams(progressBarLayoutParams);
+        loadingCircleProgressView.setVisibility(GONE);
+        addView(loadingCircleProgressView);
     }
 
     /**
@@ -74,6 +74,7 @@ public class BlurImageView extends RelativeLayout {
     }
 
     /**
+     * 未测试
      * This method will fetch bitmap from resource and make it blurry, display
      *
      * @param blurImageRes the image resource id which is needed to be blurry
@@ -85,6 +86,7 @@ public class BlurImageView extends RelativeLayout {
     }
 
     /**
+     * 未测试
      * This image won't be blurry.
      *
      * @param originImageRes The origin image resource id.
@@ -116,10 +118,6 @@ public class BlurImageView extends RelativeLayout {
 
     private boolean isRecycle = true;
 
-    public void setRecycle(boolean recycle) {
-        isRecycle = recycle;
-    }
-
     /**
      * 在{@link #setBlurBitmap}后执行 不然会持续寻找
      * 在{@link #setImageLoaderListener}后执行
@@ -128,25 +126,18 @@ public class BlurImageView extends RelativeLayout {
         imageView.postDelayed(new Runnable() {
             @Override
             public void run() {
-                if (hasBlur) {
+                if (hasBlur && blurBitmap != null) {
                     hasBlur = false;
                     if (imageLoaderListener != null)
                         imageLoaderListener.loadOrigin(mOriginImageUrl, imageView, getBlurBitmap(blurBitmap));
                 } else if (isRecycle) {
+                    //没有或得到blur资源进行每200ms循环查找
                     showOrigin();
                 } else {
                     throw new IllegalArgumentException("setBlurBitmap should be invoked before");
                 }
             }
         }, 200);
-    }
-
-    /**
-     * 在{@link #setBlurImageByUrl}、{@link #setBlurLoaderListener}后执行
-     */
-    public void showBlur() {
-        if (blurLoaderListener != null)
-            blurLoaderListener.loadBlur(mBlurImageUrl, imageView);
     }
 
     /**
@@ -163,6 +154,7 @@ public class BlurImageView extends RelativeLayout {
 
     /**
      * 需在showOrigin之前
+     * 设置模糊的程度
      *
      * @param blurRadius
      * @return
@@ -173,14 +165,6 @@ public class BlurImageView extends RelativeLayout {
         }
         mBlurRadius = blurRadius;
         return this;
-    }
-
-    /**
-     * 不一定需要
-     */
-    public void cancelImageRequestForSafety() {
-        if (cancelLoaderListener != null)
-            cancelLoaderListener.cancel(imageView);
     }
 
     public void clear() {
@@ -198,15 +182,23 @@ public class BlurImageView extends RelativeLayout {
         return this;
     }
 
-    private BlurLoaderListener blurLoaderListener;
-
-    public interface BlurLoaderListener {
-        void loadBlur(String bUrl, ImageView imageView);
-    }
-
-    public void setBlurLoaderListener(BlurLoaderListener blurLoaderListener) {
-        this.blurLoaderListener = blurLoaderListener;
-    }
+//    /**
+//     * 在{@link #setBlurImageByUrl}、{@link #setBlurLoaderListener}后执行
+//     */
+//    public void showBlur() {
+//        if (blurLoaderListener != null)
+//            blurLoaderListener.loadBlur(mBlurImageUrl, imageView);
+//    }
+//
+//    private BlurLoaderListener blurLoaderListener;
+//
+//    public interface BlurLoaderListener {
+//        void loadBlur(String bUrl, ImageView imageView);
+//    }
+//
+//    public void setBlurLoaderListener(BlurLoaderListener blurLoaderListener) {
+//        this.blurLoaderListener = blurLoaderListener;
+//    }
 
     private ImageLoaderListener imageLoaderListener;
 
@@ -221,6 +213,14 @@ public class BlurImageView extends RelativeLayout {
     public BlurImageView setImageLoaderListener(ImageLoaderListener imageLoaderListener) {
         this.imageLoaderListener = imageLoaderListener;
         return this;
+    }
+
+    /**
+     * 不一定需要
+     */
+    public void cancelImageRequestForSafety() {
+        if (cancelLoaderListener != null)
+            cancelLoaderListener.cancel(imageView);
     }
 
     private CancelLoaderListener cancelLoaderListener;
@@ -241,9 +241,9 @@ public class BlurImageView extends RelativeLayout {
      * If you disable progress, then it won't show a loading progress view when you're loading image.
      * Default the progress view is enabled.
      */
-//  public void disableProgress() {
-//    this.enableProgress = false;
-//  }
+    public void disableProgress() {
+        this.enableProgress = false;
+    }
 
     /**
      * 设置progress的数值
@@ -252,14 +252,14 @@ public class BlurImageView extends RelativeLayout {
      * @param total
      */
     private void setLoadingProgressRatio(int current, int total) {
-//    if (current < total) {
-//      if (loadingCircleProgressView.getVisibility() == GONE) {
-//        loadingCircleProgressView.setVisibility(VISIBLE);
-//      }
-//      loadingCircleProgressView.setCurrentProgressRatio((float) current / total);
-//    } else {
-//      loadingCircleProgressView.setVisibility(GONE);
-//    }
+        if (current < total) {
+            if (loadingCircleProgressView.getVisibility() == GONE) {
+                loadingCircleProgressView.setVisibility(VISIBLE);
+            }
+            loadingCircleProgressView.setCurrentProgressRatio((float) current / total);
+        } else {
+            loadingCircleProgressView.setVisibility(GONE);
+        }
     }
 
     /**
@@ -267,7 +267,7 @@ public class BlurImageView extends RelativeLayout {
      * @deprecated
      */
     public void setProgressBarBgColor(int bgColor) {
-//    this.loadingCircleProgressView.setProgressBgColor(bgColor);
+        this.loadingCircleProgressView.setProgressBgColor(bgColor);
     }
 
     /**
@@ -275,6 +275,6 @@ public class BlurImageView extends RelativeLayout {
      * @deprecated
      */
     public void setProgressBarColor(int color) {
-//    this.loadingCircleProgressView.setProgressColor(color);
+        this.loadingCircleProgressView.setProgressColor(color);
     }
 }
